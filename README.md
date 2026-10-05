@@ -54,6 +54,9 @@ QDRANT_API_KEY=
 # Required by the Guardrails LLM
 GROQ_API_KEY=
 
+# Required for evaluation metric judging (can be a separate Groq key)
+JUDGE_GROQ=
+
 # Required for the Portkey-backed RAG LLM
 PORTKEY_API_KEY=
 GROQ_SLUG=
@@ -135,6 +138,36 @@ The UI calls `http://localhost:8000` by default. To point it at a deployed backe
 BACKEND_URL=https://your-api.example.com
 ```
 
+## Run the evaluation suite
+
+The evaluation suite is a Streamlit dashboard for testing the live RAG pipeline and guardrails against the datasets in `evals/`. It uses the FastAPI `/query` endpoint, so start the API first in a separate terminal:
+
+```powershell
+uv run uvicorn app.main:app --reload --port 8000
+```
+
+Then start the evaluation dashboard:
+
+```powershell
+uv run streamlit run evals/app.py
+```
+
+If the virtual environment is active, run:
+
+```powershell
+streamlit run evals/app.py
+```
+
+The dashboard runs in three steps:
+
+1. **Ground truth:** Review the RAG question/answer pairs and guardrails test cases from `evals/golden_dataset.json`.
+2. **Live pipeline:** Send each RAG question and guardrails input to the running API. The results remain in the current Streamlit session.
+3. **Evaluation metrics:** Score the collected responses with RAGAS and tool correctness.
+
+The RAG evaluation reports Faithfulness, Answer Relevancy, Context Precision, Context Recall, Answer Correctness, and Tool Correctness. The guardrails evaluation reports true/false positives and negatives, precision, recall, and accuracy.
+
+The LLM-based metric judge uses `JUDGE_GROQ`. Set it in `.env` before starting the dashboard; it may be separate from the production `GROQ_API_KEY` to avoid consuming the production key's quota. The metric suite processes samples sequentially with cooldowns and may take approximately 50 minutes. Generated evaluation results and local caches under `evals/results/`, `evals/reports/`, and `evals/.cache/` are ignored by Git.
+
 ## API usage
 
 Send a question with an optional thread ID. Reusing a `thread_id` preserves conversation state for that session.
@@ -169,6 +202,12 @@ app/
 ├── services/retrieval/     # Embeddings, Qdrant search, and reranking
 ├── config.py               # Environment-backed application settings
 └── main.py                 # FastAPI application
+evals/
+├── app.py                  # Streamlit evaluation dashboard
+├── golden_dataset.json     # RAG and guardrails evaluation cases
+├── pipeline.py             # Live /query evaluation runner
+├── metrics.py              # RAGAS and tool correctness metrics
+└── guardrails_eval.py      # Guardrails classification metrics
 ```
 
 ## Security notes
