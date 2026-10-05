@@ -38,6 +38,11 @@ fastembed_cache/
 logs/
 *.pid
 
+# LLM evaluation outputs and local caches
+evals/results/
+evals/reports/
+evals/.cache/
+
 # Notebooks
 .ipynb_checkpoints/
 
